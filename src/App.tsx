@@ -1,121 +1,61 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
 import './App.css'
 
+async function isEpub(file:File): Promise<boolean> {
+  const buffer = await file.slice(0, 58).arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+
+  if (bytes.length < 58) {
+    return false
+  }
+
+  const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04
+  if (!isZip) {
+    return false
+  }
+
+  const text = new TextDecoder().decode(bytes.slice(30, 58))
+  return text === 'mimetypeapplication/epub+zip'
+}
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [file, setFile] = useState<File | null>(null)
+  const [epubResult, setEpubResult] = useState<boolean | null>(null)
+
+  async function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const picked = event.target.files?.[0] ?? null
+    setFile(picked)
+    setEpubResult(null)
+
+    if (!picked) {
+      return
+    }
+
+    const result = await isEpub(picked)
+    setEpubResult(result)
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
+    <main>
+      <input
+        type="file"
+        accept=".epub,application/epub+zip"
+        onChange={handleChange}
+      />
+      {file && (
+        <>
           <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+            {file.name} 0 {(file.size / 1024 / 1024).toFixed(2)} MB
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+          <p>
+            {epubResult === null && 'Checking...'}
+            {epubResult === true && 'Valid EPUB'}
+            {epubResult === false && 'Not an EPUB'}
+          </p>
+        </>
+      )}
+      <h1>EPUB Detector</h1>
+    </main>
   )
 }
 
